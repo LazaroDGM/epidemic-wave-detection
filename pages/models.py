@@ -8,7 +8,7 @@ import plotly.express as px
 col1, col2 = st.columns([0.3, 0.7], gap='large')
 
 alpha = col1.slider('Alpha value',
-                0.000001,
+                0.00001,
                 20.0,
                 (2.0)
                 )
@@ -44,7 +44,7 @@ fig = px.line(x=t, y=y, title='Richard Model')
 fig.add_vline(x=tau_R, line_dash="dash")
 fig.add_hline(y=K_R * np.power(1+alpha, -1/alpha), line_dash="dash", line_color="red")
 
-col2.plotly_chart(fig)
+col2.plotly_chart(fig, use_container_width=True)
 
 
 lim_inf = 0

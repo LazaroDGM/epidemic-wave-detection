@@ -68,14 +68,14 @@ def waves(data, p, max_window= 25):
     print('Se superó la ventana máxima permitida para la Media Móvil')
     return data
 
-def richards(t, alpha, gamma, tau, K, c=0):
+def richards(t, alpha, gamma, tau, K, c):
     return K / np.power((1 + alpha * np.exp(- alpha * gamma * (t - tau))), 1 / alpha) + c
 
 def gompertz(t, beta, tau, K, c=0):
     return K * np.exp(- np.exp(- beta * (t - tau))) + c
 
 def residuals_richards(alpha, gamma, tau, K, c, times, real):
-    approx = richards(times, alpha, gamma, tau, K) + c
+    approx = richards(times, alpha, gamma, tau, K, c)
     return real - approx
 
 def residuals_richards_parameters_vector(params, times, real):
