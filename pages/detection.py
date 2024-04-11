@@ -19,13 +19,15 @@ data['date'] = pd.to_datetime(data['date'])
 
 location = st.selectbox(
     'Seleccione un pais',
-    data['location'].unique())
+    data['location'].unique(), index=list(data['location'].unique()).index('Mexico'))
 
 location_data = data[data['location']==location]
 
+show_data = st.checkbox('Mostrar todos los datos originales', value=False)
 
-st.write('Caracteristicas de los datos originales')
-st.dataframe(location_data)
+if show_data:
+   st.dataframe(location_data)
+
 
 # ----------- WEEKS ------------ #
 
@@ -174,7 +176,7 @@ for i, wave in weeks.groupby('wave'):
                                  , sol.x[0], sol.x[1], sol.x[2], sol.x[3], sol.x[4]]
 
 st.write('Parametros de los modelos Richards ajustados a los datos')
-st.dataframe(df_params_richards)
+st.dataframe(df_params_richards, use_container_width=True)
 
 params_richards = ['alpha', 'gamma', 'tau', 'K', 'c']
 
@@ -212,7 +214,7 @@ for i, wave in weeks.groupby('wave'):
                                  , sol.x[0], sol.x[1], sol.x[2], sol.x[3]]
 
 st.write('Parametros de los modelos Gompertz ajustados a los datos')
-st.dataframe(df_params_gompertz)
+st.dataframe(df_params_gompertz, use_container_width=True)
 
 fig = go.Figure()
 fig.add_trace(go.Scatter(x=weeks['date'], y=weeks['new_cases_accumulated_norm'],

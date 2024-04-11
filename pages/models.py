@@ -37,7 +37,7 @@ lim_inf = 0
 lim_sup = 10
 
 t = np.linspace(lim_inf, lim_sup, 1000)
-y = wd.richards(t, alpha, gamma, tau_R, K_R)
+y = wd.richards(t, alpha, gamma, tau_R, K_R, 0)
 
 
 fig = px.line(x=t, y=y, title='Richard Model') 
@@ -46,12 +46,6 @@ fig.add_hline(y=K_R * np.power(1+alpha, -1/alpha), line_dash="dash", line_color=
 
 col2.plotly_chart(fig, use_container_width=True)
 
-
-lim_inf = 0
-lim_sup = 10
-
-t = np.linspace(lim_inf, lim_sup, 1000)
-y = wd.richards(t, alpha, gamma, tau_R, K_R)
 
 # --------------------------------------
 
@@ -78,7 +72,7 @@ K_G = col1.slider('K value',
                 )
 
 t = np.linspace(lim_inf, lim_sup, 1000)
-y = wd.gompertz(t, beta, tau_G, K_G)
+y = wd.gompertz(t, beta, tau_G, K_G, 0)
 
 fig = px.line(x=t, y=y, title='Gompertz Model') 
 fig.add_vline(x=tau_G, line_dash="dash")
