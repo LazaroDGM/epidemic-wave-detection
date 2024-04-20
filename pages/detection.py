@@ -230,6 +230,7 @@ fig.update_layout(title=f'Casos Diarios por cada {scale} habitantes, Gompertz',
    
 st.plotly_chart(fig)
 
+st.write('## Primera reconstruccion de las Olas Epidemicas')
 
 for i, wave in weeks.groupby('wave'):
    fig = go.Figure()
@@ -250,3 +251,92 @@ for i, wave in weeks.groupby('wave'):
                    xaxis_title='Semana',
                    yaxis_title='Casos')
    st.plotly_chart(fig)
+
+
+st.write('## Segunda')
+
+
+epsilon = 0.005
+i = 0
+while i < weeks['wave'].max():
+   
+   wave_i = weeks[weeks['wave'] == i]
+   wave_i_inc = weeks[weeks['wave'] == i + 1]
+
+   
+   last_solution = df_params_gompertz[params_gompertz].loc[i].to_numpy()
+   last_r = np.inf
+   for m in range(1, wave_i_inc.index.shape[0]):
+      temp_index = np.concatenate([wave_i.index.to_numpy(), wave_i_inc.index.to_numpy()[:m]])
+      
+      median = np.median(temp_index)
+      min_cases = weeks['new_cases_accumulated_norm'].loc[temp_index[0]]
+      total_cases = weeks['new_cases_accumulated_norm'].loc[temp_index[-1]]
+      sol = least_squares(fun= wd.residuals_gompertz_parameters_vector,
+                  x0= np.array([1, median, total_cases, min_cases]),
+                  args= [temp_index, weeks['new_cases_accumulated_norm'].loc[temp_index]],
+                  bounds=(0, np.inf)
+                  )
+      print('hola')
+      r = mean_squared_error(wd.gompertz(temp_index, *sol.x), weeks['new_cases_accumulated_norm'].loc[temp_index], squared=False)
+      
+      st.write(r)
+
+      if r > epsilon:
+         break
+      last_solution = sol.x
+      last_r = r
+
+   
+   m = m-1
+   index = np.concatenate([wave_i.index.to_numpy(), wave_i_inc.index.to_numpy()[:m]])
+   weeks['wave'].loc[index] = i
+
+   st.write(f'Se annadieron {m} observaciones a la Ola {i+1}')
+   st.write(weeks)
+
+   fix_wave_i = weeks[weeks['wave'] == i]
+
+   st.write(sol.x)
+   fig = go.Figure()
+   fig.add_trace(go.Scatter(x=fix_wave_i['date'],
+                            y=fix_wave_i['new_cases_accumulated_norm'] - fix_wave_i['new_cases_accumulated_norm'].iloc[0],
+                            mode='markers',
+                            marker_color= 'black',
+                            name= 'Datos OWID'))
+   fig.add_trace(go.Scatter(x=fix_wave_i['date'],
+                            y=wd.gompertz(index, *last_solution) - fix_wave_i['new_cases_accumulated_norm'].iloc[0],
+                            line_color='red',
+                            name='Gompertz'))
+   fig.update_layout(title=f'Casos Diarios Acumulados por cada {scale} habitantes, Ola {i + 1}',
+                   xaxis_title='Semana',
+                   yaxis_title='Casos',
+                   shapes= [
+                  dict(
+                     type="rect",
+                     x0=fix_wave_i['date'].iloc[-m],
+                     x1=fix_wave_i['date'].iloc[-1],
+                     y0=0,
+                     y1=fix_wave_i['new_cases_accumulated_norm'].max(),
+                     fillcolor="green",
+                     opacity=0.6,
+                     line_width=0,
+                     layer="below"
+                  )] if m > 0 else None)
+   st.plotly_chart(fig)
+
+   i+=1
+
+#    for j in range(4):
+#      wd.richards(wave.index, *df_params_richards[params_richards].loc[i])
+#      rmse = mean_squared_error(wd.richards(wave.index, *df_params_richards[params_richards].loc[i]),
+#                        wave['new_cases_accumulated_norm'],
+#                        squared=True)
+#      sol = least_squares(fun= wd.residuals_richards_parameters_vector,
+#                     x0= np.array([1, 1, median, total_cases, min_cases]),
+#                     args= [wave.index, wave['new_cases_accumulated_norm']],
+#                     bounds=(-1, np.inf)
+#                     )
+#    df_params_richards.loc[i] = [mean_squared_error(wd.richards(wave.index, sol.x[0], sol.x[1], sol.x[2], sol.x[3], sol.x[4]), wave['new_cases_accumulated_norm'], squared=True)
+#                                 , sol.x[0], sol.x[1], sol.x[2], sol.x[3], sol.x[4]]
+#
