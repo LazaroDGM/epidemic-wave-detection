@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import scipy as sp
 from scipy.optimize import least_squares
+from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 
 def sign(x):
@@ -12,7 +13,7 @@ def sign(x):
     else:
         return np.nan
 
-def waves(data, p, max_window= 25):
+def auto_waves(data, p, max_window= 25):
     '''
     Algoritmo para detectar olas epidemicas
 
@@ -102,3 +103,66 @@ def residuals_gompertz_parameters_vector(params, times, real):
         times,
         real
     )
+
+def first_waves_processing(data, window, col_new_cases= 'new_cases'):
+
+    data['smooth'] = data[col_new_cases].rolling(window= window, center=True).mean()
+
+    diff = data['smooth'].to_numpy().copy()
+    diff[1:] = diff[1:] - diff[:-1]
+    data['diff'] = diff
+
+    data['sign'] = data['diff'].apply(sign)
+    data.loc[:window-1, 'sign'] = data['sign'].iloc[window-1]#data.loc[window-1, 'sign']
+    data.loc[data.shape[0]-window + 2:, 'sign'] = data['sign'].iloc[-window]
+
+    data['wave'] = 0
+    for i in range(1, data.shape[0]):
+        if data['sign'].iloc[i-1] == -1 and int(data['sign'].iloc[i]) == 1:
+            data.loc[i, 'wave'] = data['wave'].iloc[i-1] + 1
+        else:
+            data.loc[i, 'wave'] = data['wave'].iloc[i-1]
+    return data
+
+def wave_richards_fitting(data, col_acum_cases, col_wave= 'wave'):
+
+    df_params_richards = pd.DataFrame(columns=['RMSE_G', 'alpha', 'gamma', 'tau_R', 'K_R', 'c_R'])
+
+    for i, wave in data.groupby(col_wave):
+        median = np.median(wave.index)
+        min_cases = wave[col_acum_cases].iloc[0]
+        total_cases = wave[col_acum_cases].iloc[-1]
+        sol = least_squares(fun= residuals_richards_parameters_vector,
+                    x0= np.array([1, 1, median, total_cases, min_cases]),
+                    args= [wave.index, wave[col_acum_cases]],
+                    bounds=(0, np.inf)
+                    )
+        df_params_richards.loc[i] = [
+            mean_squared_error(richards(wave.index, *sol.x),
+                               wave[col_acum_cases],
+                               squared=True),
+            *sol.x
+            ]
+    return df_params_richards
+
+def wave_gompertz_fitting(data, col_acum_cases, col_wave= 'wave'):
+
+    df_params_gompertz = pd.DataFrame(columns=['RMSE_G', 'beta', 'tau_G', 'K_G', 'c_G'])
+
+    for i, wave in data.groupby(col_wave):
+        median = np.median(wave.index)
+        min_cases = wave[col_acum_cases].iloc[0]
+        total_cases = wave[col_acum_cases].iloc[-1]
+        sol = least_squares(fun= residuals_gompertz_parameters_vector,
+                    x0= np.array([1, median, total_cases, min_cases]),
+                    args= [wave.index, wave[col_acum_cases]],
+                    bounds=(0, np.inf)
+                    )
+        df_params_gompertz.loc[i] = [
+            mean_squared_error(gompertz(wave.index, *sol.x),
+                               wave[col_acum_cases],
+                               squared=True),
+            *sol.x
+            ]
+    return df_params_gompertz
+
